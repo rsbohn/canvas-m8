@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "rootDir": "./src/server",
+    "outDir": "./dist/server",
+    "module": "commonjs",
+    "target": "es2019",
+    "types": ["node"],
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true
+  },
+  "include": ["src/server"]
+}

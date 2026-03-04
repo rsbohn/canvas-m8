@@ -1,0 +1,34 @@
+{
+  "name": "canvas-m8",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/server/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.server.json && vite build",
+    "dev": "vite",
+    "dev:server": "tsx watch src/server/index.ts",
+    "start": "node dist/server/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bin": {
+    "m8": "./bin/m8.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "foreman": "^3.0.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
