@@ -27,7 +27,39 @@ body {
   gap: 12px;
 }
 
-.reload-button {
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.snapshot-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.snapshot-label {
+  font-weight: 600;
+}
+
+.snapshot-select {
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+}
+
+.action-button {
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 6px;
@@ -36,8 +68,13 @@ body {
   cursor: pointer;
 }
 
-.reload-button:hover {
+.action-button:hover {
   background: #f9fafb;
+}
+
+.action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .canvas-shell {

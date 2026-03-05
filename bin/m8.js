@@ -9,6 +9,7 @@ Commands:
   note <text>           Add a note to the board
   summary               Add a summary note to the board
   snapshots             Add a snapshots note to the board
+  restore <snapshot>    Restore a snapshot to the board
   wipe-snapshots        Delete all snapshot files (requires --yes)
 
 Options:
@@ -102,6 +103,20 @@ async function main() {
       body: JSON.stringify(payload)
     });
     console.log(`Added snapshots note ${result.element?.id ?? ""}`.trim());
+    return;
+  }
+
+  if (command === "restore") {
+    const snapshot = rest.join(" ").trim();
+    if (!snapshot) {
+      throw new Error("restore requires snapshot filename");
+    }
+    await request(`${baseUrl}/api/board/restore`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ snapshot })
+    });
+    console.log(`Restored snapshot ${snapshot}`);
     return;
   }
 

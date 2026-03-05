@@ -2,6 +2,7 @@ import { createServer, IncomingMessage, ServerResponse } from "http";
 import { promises as fs } from "fs";
 import { randomUUID } from "crypto";
 import path from "path";
+import { WebSocket, WebSocketServer } from "ws";
 
 const PORT = Number(process.env.PORT ?? 6809);
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -26,9 +27,15 @@ const MIME_TYPES: Record<string, string> = {
 
 type Board = Record<string, unknown>;
 
+type WsMessage = {
+  type: "board";
+  payload: Board;
+};
+
 let board: Board = {};
 let isSaving = false;
 let lastSnapshotAt = 0;
+let wsServer: WebSocketServer | null = null;
 
 async function ensureDirectories() {
   await fs.mkdir(SNAPSHOT_DIR, { recursive: true });
@@ -83,6 +90,19 @@ async function saveBoardToDisk() {
   }
 }
 
+function broadcastBoard() {
+  if (!wsServer) {
+    return;
+  }
+  const message: WsMessage = { type: "board", payload: board };
+  const serialized = JSON.stringify(message);
+  for (const client of wsServer.clients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(serialized);
+    }
+  }
+}
+
 function sendJson(res: ServerResponse, status: number, payload: unknown) {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(payload));
@@ -114,6 +134,10 @@ type NotePayload = {
   text: string;
   x?: number;
   y?: number;
+};
+
+type RestorePayload = {
+  snapshot: string;
 };
 
 function getBoardState() {
@@ -188,6 +212,10 @@ async function readSnapshotFiles(limit = 20) {
     .slice(0, limit);
 }
 
+function isValidSnapshotName(name: string) {
+  return name.startsWith("board-") && name.endsWith(".json") && !name.includes("/") && !name.includes("\\");
+}
+
 async function handleGetBoardHistory(res: ServerResponse) {
   try {
     const files = await readSnapshotFiles();
@@ -260,6 +288,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
       const parsed = JSON.parse(body) as Board;
       board = parsed;
       await saveBoardToDisk();
+      broadcastBoard();
       sendJson(res, 200, board);
     } catch (error) {
       console.error("Failed to parse board payload", error);
@@ -281,6 +310,7 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
       const element = createTextElement(payload.text, x, y);
       getBoardElements().push(element);
       await saveBoardToDisk();
+      broadcastBoard();
       sendJson(res, 201, { element });
     } catch (error) {
       console.error("Failed to add note", error);
@@ -311,10 +341,40 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
       const element = createTextElement(summaryLines.join("\n"), x, y);
       getBoardElements().push(element);
       await saveBoardToDisk();
+      broadcastBoard();
       sendJson(res, 201, { element, summary: { total: elements.length, counts } });
     } catch (error) {
       console.error("Failed to create summary", error);
       sendJson(res, 400, { error: "Invalid summary payload" });
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/api/board/restore") {
+    try {
+      const body = await readRequestBody(req);
+      const payload = JSON.parse(body) as RestorePayload;
+      if (!payload?.snapshot || typeof payload.snapshot !== "string") {
+        sendJson(res, 400, { error: "Missing snapshot name" });
+        return;
+      }
+      if (!isValidSnapshotName(payload.snapshot)) {
+        sendJson(res, 400, { error: "Invalid snapshot name" });
+        return;
+      }
+      const snapshotPath = path.join(SNAPSHOT_DIR, payload.snapshot);
+      const data = await fs.readFile(snapshotPath, "utf-8");
+      board = JSON.parse(data) as Board;
+      await saveBoardToDisk();
+      broadcastBoard();
+      sendJson(res, 200, { board });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        sendJson(res, 404, { error: "Snapshot not found" });
+        return;
+      }
+      console.error("Failed to restore snapshot", error);
+      sendJson(res, 500, { error: "Failed to restore snapshot" });
     }
     return;
   }
@@ -372,6 +432,25 @@ async function start() {
     void handleRequest(req, res);
   });
 
+  wsServer = new WebSocketServer({ server, path: "/sync" });
+  wsServer.on("connection", (socket) => {
+    const message: WsMessage = { type: "board", payload: board };
+    socket.send(JSON.stringify(message));
+    socket.on("message", async (data) => {
+      try {
+        const text = data.toString();
+        const parsed = JSON.parse(text) as WsMessage;
+        if (parsed?.type === "board" && parsed.payload && typeof parsed.payload === "object") {
+          board = parsed.payload;
+          await saveBoardToDisk();
+          broadcastBoard();
+        }
+      } catch (error) {
+        console.error("Failed to process websocket message", error);
+      }
+    });
+  });
+
   server.listen(PORT, () => {
     console.log(`Canvas M8 server listening on http://localhost:${PORT}`);
   });
@@ -382,6 +461,7 @@ async function start() {
 
   const shutdown = async () => {
     await saveBoardToDisk();
+    wsServer?.close();
     process.exit(0);
   };
 
