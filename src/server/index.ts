@@ -192,7 +192,7 @@ function createTextElement(text: string, x: number, y: number) {
     locked: false,
     text,
     fontSize,
-    fontFamily: 5,
+    fontFamily: 1,  // 1=Virgil (default), 2=Helvetica, 3=Cascadia
     textAlign: "left",
     verticalAlign: "top",
     containerId: null,

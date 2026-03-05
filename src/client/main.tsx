@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "@excalidraw/excalidraw/index.css";
+// import "@excalidraw/excalidraw/index.css";  // CSS is now included in the JS bundle
 import "./styles.css";
 import App from "./App";
 
