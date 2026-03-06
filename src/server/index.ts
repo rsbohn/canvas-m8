@@ -163,6 +163,7 @@ function createTextElement(text: string, x: number, y: number) {
   const charWidth = fontSize * 0.6;
   const width = Math.max(160, ...lines.map((line) => Math.max(1, line.length) * charWidth));
   const height = Math.max(fontSize * lineHeight, lines.length * fontSize * lineHeight);
+  const baseline = height - (fontSize * lineHeight - fontSize * 0.9);  // Calculate baseline for text rendering
   return {
     id: randomUUID(),
     type: "text",
@@ -195,9 +196,9 @@ function createTextElement(text: string, x: number, y: number) {
     fontFamily: 1,  // 1=Virgil (default), 2=Helvetica, 3=Cascadia
     textAlign: "left",
     verticalAlign: "top",
+    baseline,
     containerId: null,
     originalText: text,
-    autoResize: true,
     lineHeight
   };
 }
