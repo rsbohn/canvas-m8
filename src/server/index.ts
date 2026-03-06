@@ -417,12 +417,226 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse) {
     return;
   }
 
+  if (method === "GET" && url.pathname === "/api/prompts") {
+    const category = url.searchParams.get("category");
+    const prompts = getPrompts(category);
+    sendJson(res, 200, prompts);
+    return;
+  }
+
   if (method === "GET") {
     await serveStatic(url.pathname, res);
     return;
   }
 
   sendText(res, 404, "Not Found");
+}
+
+type Prompt = {
+  category: string;
+  title: string;
+  description: string;
+  example?: string;
+};
+
+function getPrompts(category: string | null) {
+  const allPrompts: Prompt[] = [
+    // General Operations
+    {
+      category: "general",
+      title: "Get Current Board State",
+      description: "Retrieve all elements and appState from the canvas",
+      example: 'curl http://localhost:6809/api/board'
+    },
+    {
+      category: "general",
+      title: "Add a Simple Note",
+      description: "Add a text element at specified coordinates",
+      example: 'curl -X POST -H "Content-Type: application/json" -d \'{"text": "Hello Canvas M8!", "x": 100, "y": 200}\' http://localhost:6809/api/board/notes'
+    },
+    {
+      category: "general",
+      title: "Health Check",
+      description: "Verify the Canvas M8 server is running",
+      example: 'curl http://localhost:6809/api/health'
+    },
+    {
+      category: "general",
+      title: "Generate Board Summary",
+      description: "Create an automatic summary of board contents",
+      example: 'curl -X POST -H "Content-Type: application/json" -d \'{"x": 300, "y": 300}\' http://localhost:6809/api/board/summary'
+    },
+
+    // Element Creation
+    {
+      category: "elements",
+      title: "Create Text Element",
+      description: "Text elements support multiple lines and auto-calculate dimensions",
+      example: 'const element = createTextElement("Line 1\\nLine 2\\nLine 3", 100, 200);'
+    },
+    {
+      category: "elements",
+      title: "Font Families",
+      description: "fontFamily: 1=Virgil (hand-drawn), 2=Helvetica, 3=Cascadia Code (monospace)",
+      example: '"fontFamily": 1'
+    },
+    {
+      category: "elements",
+      title: "Color Schemes",
+      description: "Bootstrap-style colors: #d4edda (green), #fff3cd (yellow), #f8d7da (red), #d1ecf1 (blue)",
+      example: '"backgroundColor": "#d4edda"'
+    },
+    {
+      category: "elements",
+      title: "Bind Text to Shapes",
+      description: "Set containerId on text to bind it inside a rectangle",
+      example: '"containerId": "rect-id", "textAlign": "center", "verticalAlign": "middle"'
+    },
+
+    // Automation
+    {
+      category: "automation",
+      title: "Python - Add Note",
+      description: "Use Python requests to add notes programmatically",
+      example: `import requests
+response = requests.post(
+    "http://localhost:6809/api/board/notes",
+    json={"text": "Automated note", "x": 150, "y": 250}
+)
+print(response.json())`
+    },
+    {
+      category: "automation",
+      title: "Python - Get Board",
+      description: "Retrieve and parse board elements",
+      example: `import requests
+response = requests.get("http://localhost:6809/api/board")
+board = response.json()
+elements = board.get("elements", [])
+texts = [e for e in elements if e.get("type") == "text"]`
+    },
+    {
+      category: "automation",
+      title: "Batch Operations",
+      description: "Create multiple elements by fetching board, modifying, and PUT-ing back",
+      example: `# 1. GET board
+# 2. Add elements to board["elements"]
+# 3. PUT board back
+# 4. Broadcasts to all clients automatically`
+    },
+
+    // Status Boards
+    {
+      category: "status_boards",
+      title: "Color-Coded Status",
+      description: "Use background colors to indicate system health",
+      example: `Green (#d4edda): Healthy
+Yellow (#fff3cd): Warning
+Red (#f8d7da): Error
+Blue (#d1ecf1): Info`
+    },
+    {
+      category: "status_boards",
+      title: "Status Board Pattern",
+      description: "Create rectangle with centered text for each component",
+      example: `1. Create rectangle with background color
+2. Create text with containerId = rectangle.id
+3. Set textAlign="center", verticalAlign="middle"
+4. Add to elements array`
+    },
+    {
+      category: "status_boards",
+      title: "Real-Time Updates",
+      description: "Update status by modifying elements and PUT-ing board",
+      example: `# Find element by text or id
+# Update backgroundColor
+# PUT board
+# Changes broadcast to all viewers`
+    },
+
+    // Architecture Diagrams
+    {
+      category: "architecture",
+      title: "Component Boxes",
+      description: "Use rectangles with labels for system components",
+      example: `Rectangle: width=200, height=100, backgroundColor="#e7f5ff"
+Text inside: containerId=rect.id, textAlign="center"`
+    },
+    {
+      category: "architecture",
+      title: "Connection Arrows",
+      description: "Use arrow elements to show relationships (type: arrow)",
+      example: `{
+  "type": "arrow",
+  "startBinding": {"elementId": "source-id", "focus": 0, "gap": 10},
+  "endBinding": {"elementId": "target-id", "focus": 0, "gap": 10}
+}`
+    },
+    {
+      category: "architecture",
+      title: "Layer Organization",
+      description: "Use Y coordinates to organize layers: UI (y=100), Logic (y=300), Data (y=500)",
+      example: `UI Layer: y=100-200
+Business Logic: y=300-400
+Data Layer: y=500-600`
+    },
+
+    // Snapshots
+    {
+      category: "snapshots",
+      title: "List Snapshots",
+      description: "Get available snapshots (auto-created every 60s)",
+      example: 'curl "http://localhost:6809/api/board/snapshots?limit=20"'
+    },
+    {
+      category: "snapshots",
+      title: "Restore Snapshot",
+      description: "Revert board to a previous state",
+      example: 'curl -X POST -H "Content-Type: application/json" -d \'{"snapshot": "board-20260306-120000.json"}\' http://localhost:6809/api/board/restore'
+    },
+    {
+      category: "snapshots",
+      title: "Get History",
+      description: "Retrieve snapshot list with full board content",
+      example: 'curl http://localhost:6809/api/board/history'
+    },
+
+    // WebSocket
+    {
+      category: "websocket",
+      title: "Real-Time Collaboration",
+      description: "Connect via WebSocket for live updates",
+      example: `const ws = new WebSocket("ws://localhost:6809/sync");
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === "board") {
+    // Handle board update
+  }
+};`
+    },
+    {
+      category: "websocket",
+      title: "Broadcast Changes",
+      description: "All PUT/POST operations broadcast to connected clients automatically",
+      example: "Changes propagate within ~100ms to all connected browsers"
+    }
+  ];
+
+  const categories = Array.from(new Set(allPrompts.map(p => p.category))).sort();
+
+  if (category) {
+    const filtered = allPrompts.filter(p => p.category === category);
+    return {
+      categories,
+      category,
+      prompts: filtered
+    };
+  }
+
+  return {
+    categories,
+    prompts: allPrompts
+  };
 }
 
 async function start() {
